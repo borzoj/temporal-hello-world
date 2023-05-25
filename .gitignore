@@ -1,0 +1,7 @@
+dist
+node_modules
+build
+.env
+.idea
+.vscode/
+dependency-graph.png
