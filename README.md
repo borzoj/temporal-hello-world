@@ -1,40 +1,31 @@
-# Orchestration Workflows
+# Hello World Workflow
 
-A repository for workflows used in orchestration of services & activities
+A simple Temporal workflow and client for use with [https://github.com/borzoj/temporal-docker-compose](https://github.com/borzoj/temporal-docker-compose). 
 
-### Running the worker
+## How to Use
 
-
-#### Install Dependencies
-
-`npm install` to install dependencies.
-
-
-#### Run the worker
-
-`npm run start.watch` to start the Worker.
-
-
-### Running the client example
-
-`npm run workflow` In another shell,  to run the Workflow Client.
-
-The Workflow should return:
+### Clone and Install Dependencies
 
 ```bash
-Hello, Temporal!
+git clone git@github.com:borzoj/temporal-hello-world.git
+cd  temporal-hello-world
+npm install
 ```
 
-## Local Cluster
+### Run the Worker
 
-### Install Temporal local cluster
-Install [go](https://go.dev/doc/install) v1.19.3 or later to run local temporal 
 ```bash
-make install-temporalite 
+npm run build
+npm run start
 ```
 
-### Run Temporal local cluster
+
+### Run the Client 
+
 ```bash
-make start-temporalite 
+ts-node ./src/client/index.ts
 ```
-At this point you should have a server running on localhost:7233 and a web interface at http://localhost:8233.
+
+## Prometheus Metrics
+
+The worked is comfigured to emit Promoetheus metrics. You can verify the metrics are available by checking this URL while the worker is running: [http://localhost:9464](http://localhost:9464)
