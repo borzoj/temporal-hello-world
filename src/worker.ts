@@ -1,7 +1,9 @@
-import { defaultSinks, InjectedSinks, LoggerSinks, Worker } from '@temporalio/worker';
-import { NativeConnection, Runtime } from '@temporalio/worker'
+import { defaultSinks, InjectedSinks, LoggerSinks, Worker, Logger, LogLevel, LogMetadata } from '@temporalio/worker';
+import { NativeConnection, Runtime, } from '@temporalio/worker'
 import * as dotenv from 'dotenv'
 import * as defaultActivities from '@/activities/default'
+import { pino } from "pino";
+
 /*
 import { propagation } from '@opentelemetry/api';
 import {
@@ -11,6 +13,57 @@ import {
 } from '@opentelemetry/core';
 import { JaegerPropagator } from '@opentelemetry/propagator-jaeger';
 */
+
+class PinoTemporalLogger implements Logger {
+  private logger: pino.Logger;
+
+  constructor() {
+    this.logger = pino({
+      name: 'worker',
+      level: 'debug'
+    });
+  }
+
+  log(level: LogLevel, message: string, meta?: LogMetadata): any {
+    switch (level) {
+      case 'DEBUG':
+        this.logger.debug(message, meta);
+        break;
+      case 'TRACE':
+        this.logger.trace(message, meta);
+        break;
+      case 'WARN':
+        this.logger.warn(message, meta);
+        break;
+      case 'ERROR':
+        this.logger.error(message, meta);
+        break;
+      default:
+        this.logger.info(message, meta);
+    }
+  }
+
+  trace(message: string, meta?: LogMetadata): any {
+    this.logger.trace(message, meta);
+  }
+
+  debug(message: string, meta?: LogMetadata): any {
+    this.logger.debug(message, meta);
+  }
+
+  info(message: string, meta?: LogMetadata): any {
+    this.logger.info(message, meta);
+  }
+
+  warn(message: string, meta?: LogMetadata): any {
+    this.logger.warn(message, meta);
+  }
+
+  error(message: string, meta?: LogMetadata): any {
+    this.logger.error(message, meta);
+  }
+
+}
 
 dotenv.config()
 
@@ -36,7 +89,8 @@ const run = async (): Promise<void> => {
       logging: { 
         forward: { level: 'DEBUG' } 
       }
-    }
+    },
+    logger: new PinoTemporalLogger()
   })
 
   const connection: NativeConnection = await NativeConnection.connect({
