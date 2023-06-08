@@ -1,18 +1,18 @@
 import { defaultSinks, InjectedSinks, LoggerSinks, Worker, Logger, LogLevel, LogMetadata } from '@temporalio/worker';
 import { NativeConnection, Runtime, } from '@temporalio/worker'
-import * as dotenv from 'dotenv'
-import * as defaultActivities from '@/activities/default'
-import { pino } from "pino";
-
-/*
-import { propagation } from '@opentelemetry/api';
+import { Resource } from '@opentelemetry/resources';
+import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
+import { ConsoleSpanExporter, SimpleSpanProcessor, BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node'
+import { ZipkinExporter } from '@opentelemetry/exporter-zipkin'
 import {
-  CompositePropagator,
-  W3CBaggagePropagator,
-  W3CTraceContextPropagator,
-} from '@opentelemetry/core';
-import { JaegerPropagator } from '@opentelemetry/propagator-jaeger';
-*/
+  OpenTelemetryActivityInboundInterceptor,
+  makeWorkflowExporter,
+} from '@temporalio/interceptors-opentelemetry/lib/worker'
+import * as dotenv from 'dotenv'
+import { pino } from "pino"
+import * as defaultActivities from '@/activities/default'
 
 class PinoTemporalLogger implements Logger {
   private logger: pino.Logger;
@@ -68,19 +68,32 @@ class PinoTemporalLogger implements Logger {
 dotenv.config()
 
 const run = async (): Promise<void> => {
-  /*
-  propagation.setGlobalPropagator(
-    new CompositePropagator({
-    propagators: [
-      new W3CTraceContextPropagator(),
-      new W3CBaggagePropagator(),
-      new JaegerPropagator(),
-    ],
-    })
-  );
-  */
+
+  const provider = new NodeTracerProvider()
+
+  const resource = new Resource({
+    [SemanticResourceAttributes.SERVICE_NAME]: 'hello-world-worker',
+  });
+  const consoleExporter = new ConsoleSpanExporter();
+
+  const consoleProcessor = new SimpleSpanProcessor(consoleExporter)
+  provider.addSpanProcessor(consoleProcessor)
+  provider.register()
+
+
+  const zipkinExporter = new ZipkinExporter({
+
+    url: 'http://localhost:9411/api/v2/spans',
+    serviceName: 'hello-world-worker'
+  })  
+  const zipkinProcessor = new BatchSpanProcessor(zipkinExporter)
+  provider.addSpanProcessor(zipkinProcessor)
+
+  const otel = new NodeSDK({ traceExporter: zipkinExporter, resource });
   
-  //this exposes metrics for Prometheus scraping
+  await otel.start();
+  
+
   await Runtime.install({
     telemetryOptions: {
       metrics: {
@@ -99,7 +112,10 @@ const run = async (): Promise<void> => {
   })
 
 
-  const sinks: InjectedSinks<LoggerSinks> = defaultSinks()
+  const sinks: InjectedSinks<LoggerSinks> = {
+    ...defaultSinks(), 
+    exporter: makeWorkflowExporter(zipkinExporter, resource),
+  }
 
   const worker = await Worker.create({
     connection: connection,
@@ -107,7 +123,11 @@ const run = async (): Promise<void> => {
     activities: { ...defaultActivities },
     taskQueue: 'default',
     namespace: 'default',
-    sinks
+    sinks,
+    interceptors: {
+      workflowModules: [require.resolve('./workflows')],
+      activityInbound: [(ctx) => new OpenTelemetryActivityInboundInterceptor(ctx)],
+    },
   })
 
   worker.run()

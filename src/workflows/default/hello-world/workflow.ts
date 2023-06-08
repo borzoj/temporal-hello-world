@@ -1,5 +1,8 @@
-
-import { LoggerSinks, proxyActivities, proxySinks } from '@temporalio/workflow'
+import { LoggerSinks, proxyActivities, proxySinks, WorkflowInterceptorsFactory } from '@temporalio/workflow'
+import {
+  OpenTelemetryInboundInterceptor,
+  OpenTelemetryOutboundInterceptor,
+} from '@temporalio/interceptors-opentelemetry/lib/workflow';
 import type * as activities from '../../../activities/default'
 
 
@@ -30,3 +33,8 @@ export async function helloWorld (args:HelloArgs): Promise<string> {
   defaultWorkerLogger.info('hello world finish', {})
   return worldResult
 }
+
+export const interceptors: WorkflowInterceptorsFactory = () => ({
+  inbound: [new OpenTelemetryInboundInterceptor()],
+  outbound: [new OpenTelemetryOutboundInterceptor()],
+});
