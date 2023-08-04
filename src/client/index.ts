@@ -10,29 +10,25 @@ async function run() {
     namespace: 'default',
   });
   
-  while (true) {
-    try {
-      let color = 'blue' 
-      const rnd = Math.random()
-      if (rnd<=0.3) {
-        color = 'green'
-      } else if (rnd<=0.6) {
-        color = 'red'
-      }
-      const handle = await client.workflow.start(helloWorld, {
-        // type inference works! args: [name: string]
-        args: [{name:color}],
-        taskQueue: 'default',
-        // in practice, use a meaningful business ID, like customerId or transactionId
-        workflowId: 'workflow-' + nanoid(),
-      });
-      console.log(`Started workflow ${handle.workflowId}`);
-    
-      // optional: wait for client result
-      console.log(await handle.result()); // Hello, Temporal!
-    } catch (err) {
-      console.error(err);
+  try {
+    const address = {
+      line1: '113 Kiln Place',
+      city: 'London',
+      postcode: 'N99 4AD'
     }
+    const handle = await client.workflow.start(helloWorld, {
+      args: [{
+        orderId: '123456',
+        address
+      }],
+      taskQueue: 'default',
+      // in practice, use a meaningful business ID, like customerId or transactionId
+      workflowId: 'workflow-' + nanoid(),
+    });
+    console.log(`Started workflow ${handle.workflowId}`);
+    console.log(await handle.result()); // Hello, Temporal!
+  } catch (err) {
+    console.error(err);
   }
 }
 
