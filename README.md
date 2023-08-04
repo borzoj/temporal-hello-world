@@ -14,6 +14,12 @@ npm install
 
 ### Run the Worker
 
+For the RoyalMail API activities to succeed you need the followinf environment variables
+```bash
+RM_CLIENT_ID=...
+RM_CLIENT_SECRET=...
+```
+
 ```bash
 npm run build
 npm run start
